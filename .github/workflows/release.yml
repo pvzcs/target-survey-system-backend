@@ -1,0 +1,279 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g., v1.0.0)"
+        required: true
+        type: string
+
+env:
+  GO_VERSION: "1.25.1"
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: survey_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race ./...
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          DB_DATABASE: survey_test
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+
+  build:
+    name: Build Release Binaries
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build binaries for all platforms
+        run: |
+          mkdir -p dist
+
+          # Get version and build info
+          VERSION=${{ steps.get_version.outputs.VERSION }}
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          GIT_COMMIT=$(git rev-parse --short HEAD)
+
+          LDFLAGS="-s -w -X main.Version=${VERSION} -X main.BuildTime=${BUILD_TIME} -X main.GitCommit=${GIT_COMMIT}"
+
+          # Linux AMD64
+          echo "Building for Linux AMD64..."
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o dist/survey-system-linux-amd64 ./cmd/server
+
+          # Linux ARM64
+          echo "Building for Linux ARM64..."
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o dist/survey-system-linux-arm64 ./cmd/server
+
+          # macOS AMD64
+          echo "Building for macOS AMD64..."
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o dist/survey-system-darwin-amd64 ./cmd/server
+
+          # macOS ARM64
+          echo "Building for macOS ARM64..."
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o dist/survey-system-darwin-arm64 ./cmd/server
+
+          # Windows AMD64
+          echo "Building for Windows AMD64..."
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o dist/survey-system-windows-amd64.exe ./cmd/server
+
+          # Windows ARM64
+          echo "Building for Windows ARM64..."
+          GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o dist/survey-system-windows-arm64.exe ./cmd/server
+
+      - name: Create checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Create archives
+        run: |
+          cd dist
+
+          # Linux AMD64
+          tar -czf survey-system-linux-amd64.tar.gz survey-system-linux-amd64
+
+          # Linux ARM64
+          tar -czf survey-system-linux-arm64.tar.gz survey-system-linux-arm64
+
+          # macOS AMD64
+          tar -czf survey-system-darwin-amd64.tar.gz survey-system-darwin-amd64
+
+          # macOS ARM64
+          tar -czf survey-system-darwin-arm64.tar.gz survey-system-darwin-arm64
+
+          # Windows AMD64
+          zip survey-system-windows-amd64.zip survey-system-windows-amd64.exe
+
+          # Windows ARM64
+          zip survey-system-windows-arm64.zip survey-system-windows-arm64.exe
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Survey System ${{ steps.get_version.outputs.VERSION }}
+
+          ### Downloads
+
+          Download the appropriate binary for your platform:
+
+          | Platform | Architecture | Download |
+          |----------|--------------|----------|
+          | Linux | AMD64 | [survey-system-linux-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/survey-system-linux-amd64.tar.gz) |
+          | Linux | ARM64 | [survey-system-linux-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/survey-system-linux-arm64.tar.gz) |
+          | macOS | AMD64 (Intel) | [survey-system-darwin-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/survey-system-darwin-amd64.tar.gz) |
+          | macOS | ARM64 (Apple Silicon) | [survey-system-darwin-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/survey-system-darwin-arm64.tar.gz) |
+          | Windows | AMD64 | [survey-system-windows-amd64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/survey-system-windows-amd64.zip) |
+          | Windows | ARM64 | [survey-system-windows-arm64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/survey-system-windows-arm64.zip) |
+
+          ### Installation
+
+          **Linux / macOS:**
+          ```bash
+          tar -xzf survey-system-*.tar.gz
+          chmod +x survey-system-*
+          ./survey-system-*
+          ```
+
+          **Windows:**
+          ```powershell
+          # Extract the zip file
+          # Run survey-system-windows-amd64.exe
+          ```
+
+          ### Checksums (SHA256)
+
+          Verify your download with:
+          ```bash
+          sha256sum -c checksums.txt
+          ```
+
+          See [checksums.txt](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/checksums.txt) for SHA256 hashes.
+
+          ### Changes
+
+          See the [commit history](https://github.com/${{ github.repository }}/commits/${{ steps.get_version.outputs.VERSION }}) for detailed changes.
+          EOF
+
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          body: ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ secrets.DOCKER_USERNAME }}/survey-system
+          tags: |
+            type=semver,pattern={{version}},value=${{ steps.get_version.outputs.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.get_version.outputs.VERSION }}
+            type=semver,pattern={{major}},value=${{ steps.get_version.outputs.VERSION }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.get_version.outputs.VERSION }}

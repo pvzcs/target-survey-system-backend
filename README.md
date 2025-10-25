@@ -5,7 +5,6 @@
 [![Build Status](https://github.com/pvzcs/target-survey-system-backend/workflows/Build/badge.svg)](https://github.com/pvzcs/target-survey-system-backend/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/pvzcs/target-survey-system-backend)](https://goreportcard.com/report/github.com/pvzcs/target-survey-system-backend)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-lic
 
 ## 特性
 
@@ -62,7 +61,6 @@ survey-system/
 ├── docs/                    # 文档
 │   ├── api.md              # API 文档
 │   └── DEPLOYMENT.md       # 部署文档
-├── scripts/                 # 工具脚本
 ├── Dockerfile              # Docker 镜像构建文件
 ├── docker-compose.yml      # Docker Compose 配置
 ├── .env.example            # 环境变量示例
@@ -174,9 +172,6 @@ cp .env.example .env
 ```bash
 # 生成 32 字节的加密密钥
 openssl rand -base64 32
-
-# 或使用 Go 脚本
-go run scripts/hash_password.go
 ```
 
 6. **运行应用**
@@ -353,14 +348,6 @@ docker-compose down
 4. **限制 CORS**: 只允许信任的域名访问 API
 5. **定期备份**: 定期备份数据库
 6. **更新依赖**: 定期更新 Go 依赖包
-
-## 工具脚本
-
-### 生成密码哈希
-
-```bash
-go run scripts/hash_password.go your_password
-```
 
 ## 监控和维护
 
