@@ -1,0 +1,52 @@
+server:
+  port: 8080
+  mode: debug # debug, release
+  read_timeout: 10s
+  write_timeout: 10s
+
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: your-database-password
+  database: survey_system
+  max_open_conns: 100
+  max_idle_conns: 10
+  conn_max_lifetime: 1h
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  pool_size: 10
+
+jwt:
+  secret: your-secret-key-change-in-production
+  expiration: 24h
+
+encryption:
+  key: "your-32-byte-encryption-key-here!" # Must be exactly 32 bytes for AES-256
+
+cors:
+  allowed_origins:
+    - http://localhost:3000
+    - http://localhost:8080
+  allowed_methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed_headers:
+    - Authorization
+    - Content-Type
+
+rate_limit:
+  requests_per_minute: 100
+  burst: 20
+
+onelink:
+  base_url: http://localhost:3000 # Frontend base URL for share links
+  default_expiration: 1h
+  max_expiration: 168h # 7 days
