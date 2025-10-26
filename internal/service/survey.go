@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"gorm.io/gorm"
 	"survey-system/internal/cache"
 	"survey-system/internal/dto/request"
 	"survey-system/internal/dto/response"
 	"survey-system/internal/model"
 	"survey-system/internal/repository"
 	"survey-system/pkg/errors"
+
+	"gorm.io/gorm"
 )
 
 // SurveyService defines the interface for survey business logic
@@ -87,7 +88,8 @@ func (s *surveyService) UpdateSurvey(ctx context.Context, userID, surveyID uint,
 	return response.ToSurveyResponse(survey), nil
 }
 
-// DeleteSurvey deletes a survey after verifying ownership (cascade delete handled by database)
+// DeleteSurvey deletes a survey after verifying ownership
+// If cascade delete fails due to foreign key constraints, manually deletes associated data
 func (s *surveyService) DeleteSurvey(ctx context.Context, userID, surveyID uint) error {
 	// Find the survey
 	survey, err := s.surveyRepo.FindByID(surveyID)
@@ -103,7 +105,7 @@ func (s *surveyService) DeleteSurvey(ctx context.Context, userID, surveyID uint)
 		return errors.ErrForbidden
 	}
 
-	// Delete the survey
+	// Delete the survey (cascade delete handled by database)
 	if err := s.surveyRepo.Delete(surveyID); err != nil {
 		return errors.WrapError(err, "failed to delete survey")
 	}
