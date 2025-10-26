@@ -20,9 +20,9 @@ type Question struct {
 	PrefillKey  string         `gorm:"size:100" json:"prefill_key"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
-	
+
 	// Associations
-	Survey Survey `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
+	Survey Survey `gorm:"foreignKey:SurveyID;constraint:OnDelete:CASCADE" json:"survey,omitempty"`
 }
 
 // TableName specifies the table name for Question model
@@ -42,7 +42,7 @@ const (
 type QuestionConfig struct {
 	// For single/multiple choice questions
 	Options []string `json:"options,omitempty"`
-	
+
 	// For table questions
 	Columns   []TableColumn `json:"columns,omitempty"`
 	MinRows   int           `json:"min_rows,omitempty"`
@@ -53,7 +53,7 @@ type QuestionConfig struct {
 // TableColumn represents a column in a table question
 type TableColumn struct {
 	ID      string   `json:"id"`
-	Type    string   `json:"type"`    // text, number, select
+	Type    string   `json:"type"` // text, number, select
 	Label   string   `json:"label"`
 	Options []string `json:"options,omitempty"` // for select type
 }
@@ -64,12 +64,12 @@ func (c *QuestionConfig) Scan(value interface{}) error {
 		*c = QuestionConfig{}
 		return nil
 	}
-	
+
 	bytes, ok := value.([]byte)
 	if !ok {
 		return fmt.Errorf("failed to unmarshal QuestionConfig value: %v", value)
 	}
-	
+
 	return json.Unmarshal(bytes, c)
 }
 

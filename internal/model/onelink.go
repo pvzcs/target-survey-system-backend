@@ -20,7 +20,8 @@ type OneLink struct {
 	CreatedAt   time.Time       `json:"created_at"`
 
 	// Associations
-	Survey Survey `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
+	Survey    Survey     `gorm:"foreignKey:SurveyID;constraint:OnDelete:CASCADE" json:"survey,omitempty"`
+	Responses []Response `gorm:"foreignKey:OneLinkID;constraint:OnDelete:CASCADE" json:"responses,omitempty"`
 }
 
 // TableName specifies the table name for OneLink model

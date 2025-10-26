@@ -56,6 +56,11 @@ func main() {
 		log.Fatalf("Failed to run database migration: %v", err)
 	}
 
+	// Initialize default admin account
+	if err := database.InitializeDefaultAdmin(db); err != nil {
+		log.Fatalf("Failed to initialize default admin: %v", err)
+	}
+
 	// Initialize Redis connection
 	redisClient, err := pkgRedis.NewClient(&cfg.Redis)
 	if err != nil {

@@ -19,8 +19,8 @@ type Response struct {
 	CreatedAt   time.Time    `json:"created_at"`
 
 	// Associations
-	Survey  Survey  `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
-	OneLink OneLink `gorm:"foreignKey:OneLinkID" json:"one_link,omitempty"`
+	Survey  Survey  `gorm:"foreignKey:SurveyID;constraint:OnDelete:CASCADE" json:"survey,omitempty"`
+	OneLink OneLink `gorm:"foreignKey:OneLinkID;constraint:OnDelete:CASCADE" json:"one_link,omitempty"`
 }
 
 // TableName specifies the table name for Response model
