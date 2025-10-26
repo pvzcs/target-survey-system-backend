@@ -12,6 +12,8 @@ type UserRepository interface {
 	Create(user *model.User) error
 	FindByID(id uint) (*model.User, error)
 	FindByUsername(username string) (*model.User, error)
+	Update(user *model.User) error
+	UpdatePassword(userID uint, newPassword string) error
 	HashPassword(password string) (string, error)
 	ComparePassword(hashedPassword, password string) error
 }
@@ -70,4 +72,22 @@ func (r *userRepository) HashPassword(password string) (string, error) {
 // ComparePassword compares a hashed password with a plain text password
 func (r *userRepository) ComparePassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}
+
+// Update updates user information (excluding password)
+func (r *userRepository) Update(user *model.User) error {
+	return r.db.Model(user).Updates(map[string]interface{}{
+		"username": user.Username,
+		"email":    user.Email,
+	}).Error
+}
+
+// UpdatePassword updates user password with hashing
+func (r *userRepository) UpdatePassword(userID uint, newPassword string) error {
+	hashedPassword, err := r.HashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	return r.db.Model(&model.User{}).Where("id = ?", userID).Update("password", hashedPassword).Error
 }

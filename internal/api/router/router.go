@@ -32,10 +32,14 @@ func SetupRouter(
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		// Auth routes (public, no authentication required)
+		// Auth routes
 		auth := v1.Group("/auth")
 		{
+			// Public routes (no authentication required)
 			auth.POST("/login", authHandler.Login)
+
+			// Protected routes (authentication required)
+			auth.PUT("/profile", authMiddleware, authHandler.UpdateProfile)
 		}
 		// Survey routes (protected)
 		surveys := v1.Group("/surveys")

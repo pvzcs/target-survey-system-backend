@@ -12,3 +12,11 @@ type RegisterRequest struct {
 	Password string `json:"password" binding:"required,min=6"`
 	Email    string `json:"email" binding:"omitempty,email,max=100"`
 }
+
+// UpdateProfileRequest represents the request to update user profile
+type UpdateProfileRequest struct {
+	Username    string `json:"username" binding:"omitempty,min=3,max=50"`
+	Email       string `json:"email" binding:"omitempty,email,max=100"`
+	OldPassword string `json:"old_password" binding:"required_with=NewPassword,min=6"`
+	NewPassword string `json:"new_password" binding:"omitempty,min=6"`
+}

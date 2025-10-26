@@ -90,4 +90,133 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
+// UpdateProfile handles user profile update requests
+// @Summary Update user profile
+// @Description Update username, email, and/or password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body request.UpdateProfileRequest true "Profile update data"
+// @Success 200 {object} response.UpdateProfileResponse
+// @Failure 400 {object} errors.AppError
+// @Failure 401 {object} errors.AppError
+// @Router /api/v1/auth/profile [put]
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	// Get user ID from context (set by auth middleware)
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "UNAUTHORIZED",
+				"message": "用户未认证",
+			},
+		})
+		return
+	}
 
+	var req request.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "VALIDATION_FAILED",
+				"message": "请求参数验证失败",
+				"details": err.Error(),
+			},
+		})
+		return
+	}
+
+	// Validate that at least one field is being updated
+	if req.Username == "" && req.Email == "" && req.NewPassword == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "VALIDATION_FAILED",
+				"message": "至少需要提供一个要更新的字段",
+			},
+		})
+		return
+	}
+
+	// If password is being changed, old password is required
+	if req.NewPassword != "" && req.OldPassword == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "VALIDATION_FAILED",
+				"message": "修改密码需要提供旧密码",
+			},
+		})
+		return
+	}
+
+	// Call auth service to update profile
+	updatedUser, err := h.authService.UpdateProfile(
+		userID.(uint),
+		req.Username,
+		req.Email,
+		req.OldPassword,
+		req.NewPassword,
+	)
+	if err != nil {
+		// Check specific error types
+		switch err.Error() {
+		case "user not found":
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "USER_NOT_FOUND",
+					"message": "用户不存在",
+				},
+			})
+			return
+		case "username already exists":
+			c.JSON(http.StatusConflict, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "USERNAME_EXISTS",
+					"message": "用户名已存在",
+				},
+			})
+			return
+		case "old password is incorrect":
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "INVALID_PASSWORD",
+					"message": "旧密码不正确",
+				},
+			})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"error": gin.H{
+					"code":    "INTERNAL_ERROR",
+					"message": "服务器内部错误",
+				},
+			})
+			return
+		}
+	}
+
+	// Convert to response DTO
+	resp := &response.UpdateProfileResponse{
+		Message: "个人信息更新成功",
+		User: response.UserResponse{
+			ID:        updatedUser.ID,
+			Username:  updatedUser.Username,
+			Email:     updatedUser.Email,
+			Role:      updatedUser.Role,
+			CreatedAt: updatedUser.CreatedAt,
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    resp,
+	})
+}

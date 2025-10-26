@@ -53,32 +53,31 @@ Token 有效期为 24 小时，过期后需要重新登录。
 }
 ```
 
-
 ### 错误响应
 
 ```json
 {
-    "success": false,
-    "error": {
-        "code": "ERROR_CODE",
-        "message": "错误描述信息"
-    }
+  "success": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "错误描述信息"
+  }
 }
 ```
 
 ## 错误码说明
 
-| 错误码 | HTTP 状态码 | 说明 |
-|--------|------------|------|
-| `UNAUTHORIZED` | 401 | 未授权访问，需要登录 |
-| `FORBIDDEN` | 403 | 禁止访问，权限不足 |
-| `NOT_FOUND` | 404 | 资源不存在 |
-| `INVALID_TOKEN` | 400 | 无效的令牌 |
-| `TOKEN_EXPIRED` | 403 | 令牌已过期 |
-| `LINK_USED` | 403 | 链接已被使用 |
-| `VALIDATION_FAILED` | 400 | 数据验证失败 |
-| `SURVEY_NOT_PUBLISHED` | 400 | 问卷未发布 |
-| `INTERNAL_ERROR` | 500 | 服务器内部错误 |
+| 错误码                 | HTTP 状态码 | 说明                 |
+| ---------------------- | ----------- | -------------------- |
+| `UNAUTHORIZED`         | 401         | 未授权访问，需要登录 |
+| `FORBIDDEN`            | 403         | 禁止访问，权限不足   |
+| `NOT_FOUND`            | 404         | 资源不存在           |
+| `INVALID_TOKEN`        | 400         | 无效的令牌           |
+| `TOKEN_EXPIRED`        | 403         | 令牌已过期           |
+| `LINK_USED`            | 403         | 链接已被使用         |
+| `VALIDATION_FAILED`    | 400         | 数据验证失败         |
+| `SURVEY_NOT_PUBLISHED` | 400         | 问卷未发布           |
+| `INTERNAL_ERROR`       | 500         | 服务器内部错误       |
 
 ## 分页参数
 
@@ -107,32 +106,32 @@ Token 有效期为 24 小时，过期后需要重新登录。
 
 ```json
 {
-    "username": "admin",
-    "password": "password123"
+  "username": "admin",
+  "password": "password123"
 }
 ```
 
 **请求参数**:
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| username | string | 是 | 用户名，3-50 字符 |
-| password | string | 是 | 密码，至少 6 字符 |
+| 字段     | 类型   | 必填 | 说明              |
+| -------- | ------ | ---- | ----------------- |
+| username | string | 是   | 用户名，3-50 字符 |
+| password | string | 是   | 密码，至少 6 字符 |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        "user": {
-            "id": 1,
-            "username": "admin",
-            "email": "admin@example.com",
-            "role": "admin"
-        }
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "role": "admin"
     }
+  }
 }
 ```
 
@@ -142,11 +141,11 @@ Token 有效期为 24 小时，过期后需要重新登录。
 
 ```json
 {
-    "success": false,
-    "error": {
-        "code": "UNAUTHORIZED",
-        "message": "用户名或密码错误"
-    }
+  "success": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "用户名或密码错误"
+  }
 }
 ```
 
@@ -158,6 +157,149 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
   -d '{
     "username": "admin",
     "password": "password123"
+  }'
+```
+
+### 1.2 更新用户信息
+
+**端点**: `PUT /api/v1/auth/profile`
+
+**认证**: 需要 JWT
+
+**描述**: 更新当前登录用户的用户名、邮箱和/或密码
+
+**请求体**:
+
+```json
+{
+  "username": "newadmin",
+  "email": "newadmin@example.com",
+  "old_password": "password123",
+  "new_password": "newpassword123"
+}
+```
+
+**请求参数**:
+
+| 字段         | 类型   | 必填     | 说明                                |
+| ------------ | ------ | -------- | ----------------------------------- |
+| username     | string | 否       | 新用户名，3-50 字符                 |
+| email        | string | 否       | 新邮箱地址                          |
+| old_password | string | 条件必填 | 旧密码，修改密码时必填，至少 6 字符 |
+| new_password | string | 否       | 新密码，至少 6 字符                 |
+
+**注意事项**:
+
+- 至少需要提供一个要更新的字段（username、email 或 new_password）
+- 如果要修改密码，必须同时提供 old_password 和 new_password
+- 可以单独更新用户名或邮箱，无需提供密码
+- 用户名不能与其他用户重复
+
+**成功响应** (200 OK):
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "个人信息更新成功",
+    "user": {
+      "id": 1,
+      "username": "newadmin",
+      "email": "newadmin@example.com",
+      "role": "admin",
+      "created_at": "2025-10-25T10:00:00Z"
+    }
+  }
+}
+```
+
+**错误响应**:
+
+- 400 Bad Request - 请求参数验证失败:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "至少需要提供一个要更新的字段"
+  }
+}
+```
+
+- 400 Bad Request - 旧密码错误:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_PASSWORD",
+    "message": "旧密码不正确"
+  }
+}
+```
+
+- 409 Conflict - 用户名已存在:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "USERNAME_EXISTS",
+    "message": "用户名已存在"
+  }
+}
+```
+
+- 404 Not Found - 用户不存在:
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "USER_NOT_FOUND",
+    "message": "用户不存在"
+  }
+}
+```
+
+**cURL 示例**:
+
+```bash
+# 只更新用户名
+curl -X PUT http://localhost:8080/api/v1/auth/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "username": "newadmin"
+  }'
+
+# 只更新邮箱
+curl -X PUT http://localhost:8080/api/v1/auth/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "email": "newadmin@example.com"
+  }'
+
+# 只修改密码
+curl -X PUT http://localhost:8080/api/v1/auth/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "old_password": "password123",
+    "new_password": "newpassword123"
+  }'
+
+# 同时更新用户名、邮箱和密码
+curl -X PUT http://localhost:8080/api/v1/auth/profile \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "username": "newadmin",
+    "email": "newadmin@example.com",
+    "old_password": "password123",
+    "new_password": "newpassword123"
   }'
 ```
 
@@ -177,32 +319,32 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 ```json
 {
-    "title": "客户满意度调查",
-    "description": "本问卷旨在了解客户对我们服务的满意度"
+  "title": "客户满意度调查",
+  "description": "本问卷旨在了解客户对我们服务的满意度"
 }
 ```
 
 **请求参数**:
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| title | string | 是 | 问卷标题，最多 200 字符 |
-| description | string | 否 | 问卷描述，最多 5000 字符 |
+| 字段        | 类型   | 必填 | 说明                     |
+| ----------- | ------ | ---- | ------------------------ |
+| title       | string | 是   | 问卷标题，最多 200 字符  |
+| description | string | 否   | 问卷描述，最多 5000 字符 |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "user_id": 1,
-        "title": "客户满意度调查",
-        "description": "本问卷旨在了解客户对我们服务的满意度",
-        "status": "draft",
-        "created_at": "2025-10-25T10:00:00Z",
-        "updated_at": "2025-10-25T10:00:00Z"
-    }
+  "success": true,
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "title": "客户满意度调查",
+    "description": "本问卷旨在了解客户对我们服务的满意度",
+    "status": "draft",
+    "created_at": "2025-10-25T10:00:00Z",
+    "updated_at": "2025-10-25T10:00:00Z"
+  }
 }
 ```
 
@@ -228,16 +370,16 @@ curl -X POST http://localhost:8080/api/v1/surveys \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **请求体**:
 
 ```json
 {
-    "title": "客户满意度调查（更新版）",
-    "description": "更新后的描述"
+  "title": "客户满意度调查（更新版）",
+  "description": "更新后的描述"
 }
 ```
 
@@ -245,16 +387,16 @@ curl -X POST http://localhost:8080/api/v1/surveys \
 
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "user_id": 1,
-        "title": "客户满意度调查（更新版）",
-        "description": "更新后的描述",
-        "status": "draft",
-        "created_at": "2025-10-25T10:00:00Z",
-        "updated_at": "2025-10-25T10:30:00Z"
-    }
+  "success": true,
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "title": "客户满意度调查（更新版）",
+    "description": "更新后的描述",
+    "status": "draft",
+    "created_at": "2025-10-25T10:00:00Z",
+    "updated_at": "2025-10-25T10:30:00Z"
+  }
 }
 ```
 
@@ -280,16 +422,16 @@ curl -X PUT http://localhost:8080/api/v1/surveys/1 \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": null
+  "success": true,
+  "data": null
 }
 ```
 
@@ -310,54 +452,54 @@ curl -X DELETE http://localhost:8080/api/v1/surveys/1 \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": {
+  "success": true,
+  "data": {
+    "id": 1,
+    "user_id": 1,
+    "title": "客户满意度调查",
+    "description": "本问卷旨在了解客户对我们服务的满意度",
+    "status": "published",
+    "created_at": "2025-10-25T10:00:00Z",
+    "updated_at": "2025-10-25T10:30:00Z",
+    "questions": [
+      {
         "id": 1,
-        "user_id": 1,
-        "title": "客户满意度调查",
-        "description": "本问卷旨在了解客户对我们服务的满意度",
-        "status": "published",
-        "created_at": "2025-10-25T10:00:00Z",
-        "updated_at": "2025-10-25T10:30:00Z",
-        "questions": [
-            {
-                "id": 1,
-                "survey_id": 1,
-                "type": "text",
-                "title": "您的姓名",
-                "description": "",
-                "required": true,
-                "order": 1,
-                "config": {},
-                "prefill_key": "name",
-                "created_at": "2025-10-25T10:05:00Z",
-                "updated_at": "2025-10-25T10:05:00Z"
-            },
-            {
-                "id": 2,
-                "survey_id": 1,
-                "type": "single",
-                "title": "您对我们的服务满意吗？",
-                "description": "",
-                "required": true,
-                "order": 2,
-                "config": {
-                    "options": ["非常满意", "满意", "一般", "不满意"]
-                },
-                "prefill_key": "",
-                "created_at": "2025-10-25T10:06:00Z",
-                "updated_at": "2025-10-25T10:06:00Z"
-            }
-        ]
-    }
+        "survey_id": 1,
+        "type": "text",
+        "title": "您的姓名",
+        "description": "",
+        "required": true,
+        "order": 1,
+        "config": {},
+        "prefill_key": "name",
+        "created_at": "2025-10-25T10:05:00Z",
+        "updated_at": "2025-10-25T10:05:00Z"
+      },
+      {
+        "id": 2,
+        "survey_id": 1,
+        "type": "single",
+        "title": "您对我们的服务满意吗？",
+        "description": "",
+        "required": true,
+        "order": 2,
+        "config": {
+          "options": ["非常满意", "满意", "一般", "不满意"]
+        },
+        "prefill_key": "",
+        "created_at": "2025-10-25T10:06:00Z",
+        "updated_at": "2025-10-25T10:06:00Z"
+      }
+    ]
+  }
 }
 ```
 
@@ -378,41 +520,41 @@ curl -X GET http://localhost:8080/api/v1/surveys/1 \
 
 **查询参数**:
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| page | integer | 否 | 1 | 页码 |
-| page_size | integer | 否 | 20 | 每页数量（最大 100） |
+| 参数      | 类型    | 必填 | 默认值 | 说明                 |
+| --------- | ------- | ---- | ------ | -------------------- |
+| page      | integer | 否   | 1      | 页码                 |
+| page_size | integer | 否   | 20     | 每页数量（最大 100） |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "user_id": 1,
-            "title": "客户满意度调查",
-            "description": "本问卷旨在了解客户对我们服务的满意度",
-            "status": "published",
-            "created_at": "2025-10-25T10:00:00Z",
-            "updated_at": "2025-10-25T10:30:00Z"
-        },
-        {
-            "id": 2,
-            "user_id": 1,
-            "title": "员工反馈问卷",
-            "description": "",
-            "status": "draft",
-            "created_at": "2025-10-25T11:00:00Z",
-            "updated_at": "2025-10-25T11:00:00Z"
-        }
-    ],
-    "meta": {
-        "page": 1,
-        "page_size": 20,
-        "total": 2
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "title": "客户满意度调查",
+      "description": "本问卷旨在了解客户对我们服务的满意度",
+      "status": "published",
+      "created_at": "2025-10-25T10:00:00Z",
+      "updated_at": "2025-10-25T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "user_id": 1,
+      "title": "员工反馈问卷",
+      "description": "",
+      "status": "draft",
+      "created_at": "2025-10-25T11:00:00Z",
+      "updated_at": "2025-10-25T11:00:00Z"
     }
+  ],
+  "meta": {
+    "page": 1,
+    "page_size": 20,
+    "total": 2
+  }
 }
 ```
 
@@ -433,16 +575,16 @@ curl -X GET "http://localhost:8080/api/v1/surveys?page=1&page_size=20" \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": null
+  "success": true,
+  "data": null
 }
 ```
 
@@ -469,65 +611,67 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 
 ```json
 {
-    "survey_id": 1,
-    "type": "single",
-    "title": "您对我们的服务满意吗？",
-    "description": "请选择最符合您感受的选项",
-    "required": true,
-    "order": 1,
-    "config": {
-        "options": ["非常满意", "满意", "一般", "不满意"]
-    },
-    "prefill_key": ""
+  "survey_id": 1,
+  "type": "single",
+  "title": "您对我们的服务满意吗？",
+  "description": "请选择最符合您感受的选项",
+  "required": true,
+  "order": 1,
+  "config": {
+    "options": ["非常满意", "满意", "一般", "不满意"]
+  },
+  "prefill_key": ""
 }
 ```
 
 **请求参数**:
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| survey_id | integer | 是 | 问卷 ID |
-| type | string | 是 | 题目类型：text, single, multiple, table |
-| title | string | 是 | 题目标题，最多 500 字符 |
-| description | string | 否 | 题目描述，最多 5000 字符 |
-| required | boolean | 否 | 是否必填，默认 false |
-| order | integer | 是 | 显示顺序，从 0 开始 |
-| config | object | 否 | 题目配置（根据类型不同） |
-| prefill_key | string | 否 | 预填字段键名，最多 100 字符 |
+| 字段        | 类型    | 必填 | 说明                                    |
+| ----------- | ------- | ---- | --------------------------------------- |
+| survey_id   | integer | 是   | 问卷 ID                                 |
+| type        | string  | 是   | 题目类型：text, single, multiple, table |
+| title       | string  | 是   | 题目标题，最多 500 字符                 |
+| description | string  | 否   | 题目描述，最多 5000 字符                |
+| required    | boolean | 否   | 是否必填，默认 false                    |
+| order       | integer | 是   | 显示顺序，从 0 开始                     |
+| config      | object  | 否   | 题目配置（根据类型不同）                |
+| prefill_key | string  | 否   | 预填字段键名，最多 100 字符             |
 
 **题目配置说明**:
 
 **单选题/多选题 (single/multiple)**:
+
 ```json
 {
-    "options": ["选项1", "选项2", "选项3"]
+  "options": ["选项1", "选项2", "选项3"]
 }
 ```
 
 **表格题 (table)**:
+
 ```json
 {
-    "columns": [
-        {
-            "id": "col1",
-            "type": "text",
-            "label": "姓名"
-        },
-        {
-            "id": "col2",
-            "type": "number",
-            "label": "年龄"
-        },
-        {
-            "id": "col3",
-            "type": "select",
-            "label": "性别",
-            "options": ["男", "女"]
-        }
-    ],
-    "min_rows": 1,
-    "max_rows": 10,
-    "can_add_row": true
+  "columns": [
+    {
+      "id": "col1",
+      "type": "text",
+      "label": "姓名"
+    },
+    {
+      "id": "col2",
+      "type": "number",
+      "label": "年龄"
+    },
+    {
+      "id": "col3",
+      "type": "select",
+      "label": "性别",
+      "options": ["男", "女"]
+    }
+  ],
+  "min_rows": 1,
+  "max_rows": 10,
+  "can_add_row": true
 }
 ```
 
@@ -535,22 +679,22 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "survey_id": 1,
-        "type": "single",
-        "title": "您对我们的服务满意吗？",
-        "description": "请选择最符合您感受的选项",
-        "required": true,
-        "order": 1,
-        "config": {
-            "options": ["非常满意", "满意", "一般", "不满意"]
-        },
-        "prefill_key": "",
-        "created_at": "2025-10-25T10:05:00Z",
-        "updated_at": "2025-10-25T10:05:00Z"
-    }
+  "success": true,
+  "data": {
+    "id": 1,
+    "survey_id": 1,
+    "type": "single",
+    "title": "您对我们的服务满意吗？",
+    "description": "请选择最符合您感受的选项",
+    "required": true,
+    "order": 1,
+    "config": {
+      "options": ["非常满意", "满意", "一般", "不满意"]
+    },
+    "prefill_key": "",
+    "created_at": "2025-10-25T10:05:00Z",
+    "updated_at": "2025-10-25T10:05:00Z"
+  }
 }
 ```
 
@@ -583,9 +727,9 @@ curl -X POST http://localhost:8080/api/v1/questions \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 题目 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 题目 ID |
 
 **请求体**: 与创建题目相同（不包含 survey_id）
 
@@ -593,22 +737,22 @@ curl -X POST http://localhost:8080/api/v1/questions \
 
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "survey_id": 1,
-        "type": "single",
-        "title": "您对我们的服务满意吗？（更新版）",
-        "description": "请选择最符合您感受的选项",
-        "required": true,
-        "order": 1,
-        "config": {
-            "options": ["非常满意", "满意", "一般", "不满意", "非常不满意"]
-        },
-        "prefill_key": "",
-        "created_at": "2025-10-25T10:05:00Z",
-        "updated_at": "2025-10-25T10:35:00Z"
-    }
+  "success": true,
+  "data": {
+    "id": 1,
+    "survey_id": 1,
+    "type": "single",
+    "title": "您对我们的服务满意吗？（更新版）",
+    "description": "请选择最符合您感受的选项",
+    "required": true,
+    "order": 1,
+    "config": {
+      "options": ["非常满意", "满意", "一般", "不满意", "非常不满意"]
+    },
+    "prefill_key": "",
+    "created_at": "2025-10-25T10:05:00Z",
+    "updated_at": "2025-10-25T10:35:00Z"
+  }
 }
 ```
 
@@ -640,16 +784,16 @@ curl -X PUT http://localhost:8080/api/v1/questions/1 \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 题目 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 题目 ID |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": null
+  "success": true,
+  "data": null
 }
 ```
 
@@ -670,30 +814,30 @@ curl -X DELETE http://localhost:8080/api/v1/questions/1 \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **请求体**:
 
 ```json
 {
-    "question_ids": [3, 1, 2, 4]
+  "question_ids": [3, 1, 2, 4]
 }
 ```
 
 **请求参数**:
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| question_ids | array | 是 | 题目 ID 数组，按新的顺序排列 |
+| 字段         | 类型  | 必填 | 说明                         |
+| ------------ | ----- | ---- | ---------------------------- |
+| question_ids | array | 是   | 题目 ID 数组，按新的顺序排列 |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": null
+  "success": true,
+  "data": null
 }
 ```
 
@@ -722,39 +866,39 @@ curl -X PUT http://localhost:8080/api/v1/surveys/1/questions/reorder \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **请求体**:
 
 ```json
 {
-    "prefill_data": {
-        "name": "张三",
-        "email": "zhangsan@example.com"
-    },
-    "expires_at": "2025-10-26T10:00:00Z"
+  "prefill_data": {
+    "name": "张三",
+    "email": "zhangsan@example.com"
+  },
+  "expires_at": "2025-10-26T10:00:00Z"
 }
 ```
 
 **请求参数**:
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| prefill_data | object | 否 | 预填数据，键为题目的 prefill_key，值为预填值 |
-| expires_at | string | 否 | 过期时间（ISO 8601 格式），默认 1 小时后 |
+| 字段         | 类型   | 必填 | 说明                                         |
+| ------------ | ------ | ---- | -------------------------------------------- |
+| prefill_data | object | 否   | 预填数据，键为题目的 prefill_key，值为预填值 |
+| expires_at   | string | 否   | 过期时间（ISO 8601 格式），默认 1 小时后     |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": {
-        "url": "http://localhost:3000/survey/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-        "expires_at": "2025-10-26T10:00:00Z"
-    }
+  "success": true,
+  "data": {
+    "url": "http://localhost:3000/survey/1?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2025-10-26T10:00:00Z"
+  }
 }
 ```
 
@@ -787,55 +931,55 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/share \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **查询参数**:
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| token | string | 是 | 加密的一次性访问令牌 |
+| 参数  | 类型   | 必填 | 说明                 |
+| ----- | ------ | ---- | -------------------- |
+| token | string | 是   | 加密的一次性访问令牌 |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": {
-        "survey": {
-            "id": 1,
-            "title": "客户满意度调查",
-            "description": "本问卷旨在了解客户对我们服务的满意度",
-            "status": "published",
-            "questions": [
-                {
-                    "id": 1,
-                    "type": "text",
-                    "title": "您的姓名",
-                    "description": "",
-                    "required": true,
-                    "order": 1,
-                    "config": {},
-                    "prefill_key": "name"
-                },
-                {
-                    "id": 2,
-                    "type": "text",
-                    "title": "您的邮箱",
-                    "description": "",
-                    "required": true,
-                    "order": 2,
-                    "config": {},
-                    "prefill_key": "email"
-                }
-            ]
+  "success": true,
+  "data": {
+    "survey": {
+      "id": 1,
+      "title": "客户满意度调查",
+      "description": "本问卷旨在了解客户对我们服务的满意度",
+      "status": "published",
+      "questions": [
+        {
+          "id": 1,
+          "type": "text",
+          "title": "您的姓名",
+          "description": "",
+          "required": true,
+          "order": 1,
+          "config": {},
+          "prefill_key": "name"
         },
-        "prefill_data": {
-            "name": "张三",
-            "email": "zhangsan@example.com"
+        {
+          "id": 2,
+          "type": "text",
+          "title": "您的邮箱",
+          "description": "",
+          "required": true,
+          "order": 2,
+          "config": {},
+          "prefill_key": "email"
         }
+      ]
+    },
+    "prefill_data": {
+      "name": "张三",
+      "email": "zhangsan@example.com"
     }
+  }
 }
 ```
 
@@ -862,39 +1006,39 @@ curl -X GET "http://localhost:8080/api/v1/public/surveys/1?token=eyJhbGciOiJIUzI
 
 ```json
 {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "answers": [
-        {
-            "question_id": 1,
-            "value": "张三"
-        },
-        {
-            "question_id": 2,
-            "value": "满意"
-        },
-        {
-            "question_id": 3,
-            "value": ["选项1", "选项2"]
-        },
-        {
-            "question_id": 4,
-            "value": [
-                ["张三", "30", "男"],
-                ["李四", "25", "女"]
-            ]
-        }
-    ]
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "answers": [
+    {
+      "question_id": 1,
+      "value": "张三"
+    },
+    {
+      "question_id": 2,
+      "value": "满意"
+    },
+    {
+      "question_id": 3,
+      "value": ["选项1", "选项2"]
+    },
+    {
+      "question_id": 4,
+      "value": [
+        ["张三", "30", "男"],
+        ["李四", "25", "女"]
+      ]
+    }
+  ]
 }
 ```
 
 **请求参数**:
 
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| token | string | 是 | 加密的一次性访问令牌 |
-| answers | array | 是 | 答案数组 |
-| answers[].question_id | integer | 是 | 题目 ID |
-| answers[].value | any | 是 | 答案值（根据题目类型不同） |
+| 字段                  | 类型    | 必填 | 说明                       |
+| --------------------- | ------- | ---- | -------------------------- |
+| token                 | string  | 是   | 加密的一次性访问令牌       |
+| answers               | array   | 是   | 答案数组                   |
+| answers[].question_id | integer | 是   | 题目 ID                    |
+| answers[].value       | any     | 是   | 答案值（根据题目类型不同） |
 
 **答案值类型说明**:
 
@@ -907,10 +1051,10 @@ curl -X GET "http://localhost:8080/api/v1/public/surveys/1?token=eyJhbGciOiJIUzI
 
 ```json
 {
-    "success": true,
-    "data": {
-        "message": "提交成功"
-    }
+  "success": true,
+  "data": {
+    "message": "提交成功"
+  }
 }
 ```
 
@@ -954,49 +1098,49 @@ curl -X POST http://localhost:8080/api/v1/public/responses \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **查询参数**:
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| page | integer | 否 | 1 | 页码 |
-| page_size | integer | 否 | 20 | 每页数量（最大 100） |
+| 参数      | 类型    | 必填 | 默认值 | 说明                 |
+| --------- | ------- | ---- | ------ | -------------------- |
+| page      | integer | 否   | 1      | 页码                 |
+| page_size | integer | 否   | 20     | 每页数量（最大 100） |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": [
-        {
-            "id": 1,
-            "survey_id": 1,
-            "data": {
-                "answers": [
-                    {
-                        "question_id": 1,
-                        "value": "张三"
-                    },
-                    {
-                        "question_id": 2,
-                        "value": "满意"
-                    }
-                ]
-            },
-            "ip_address": "192.168.1.100",
-            "user_agent": "Mozilla/5.0...",
-            "submitted_at": "2025-10-25T12:00:00Z",
-            "created_at": "2025-10-25T12:00:00Z"
-        }
-    ],
-    "meta": {
-        "page": 1,
-        "page_size": 20,
-        "total": 1
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "survey_id": 1,
+      "data": {
+        "answers": [
+          {
+            "question_id": 1,
+            "value": "张三"
+          },
+          {
+            "question_id": 2,
+            "value": "满意"
+          }
+        ]
+      },
+      "ip_address": "192.168.1.100",
+      "user_agent": "Mozilla/5.0...",
+      "submitted_at": "2025-10-25T12:00:00Z",
+      "created_at": "2025-10-25T12:00:00Z"
     }
+  ],
+  "meta": {
+    "page": 1,
+    "page_size": 20,
+    "total": 1
+  }
 }
 ```
 
@@ -1017,30 +1161,30 @@ curl -X GET "http://localhost:8080/api/v1/surveys/1/responses?page=1&page_size=2
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **成功响应** (200 OK):
 
 ```json
 {
-    "success": true,
-    "data": {
-        "survey_id": 1,
-        "total_responses": 150,
-        "completion_rate": 100.0
-    }
+  "success": true,
+  "data": {
+    "survey_id": 1,
+    "total_responses": 150,
+    "completion_rate": 100.0
+  }
 }
 ```
 
 **响应字段说明**:
 
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| survey_id | integer | 问卷 ID |
-| total_responses | integer | 总填答数 |
-| completion_rate | float | 完成率（百分比） |
+| 字段            | 类型    | 说明             |
+| --------------- | ------- | ---------------- |
+| survey_id       | integer | 问卷 ID          |
+| total_responses | integer | 总填答数         |
+| completion_rate | float   | 完成率（百分比） |
 
 **cURL 示例**:
 
@@ -1059,15 +1203,15 @@ curl -X GET http://localhost:8080/api/v1/surveys/1/statistics \
 
 **路径参数**:
 
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| id | integer | 问卷 ID |
+| 参数 | 类型    | 说明    |
+| ---- | ------- | ------- |
+| id   | integer | 问卷 ID |
 
 **查询参数**:
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
-|------|------|------|--------|------|
-| format | string | 否 | csv | 导出格式：csv 或 excel |
+| 参数   | 类型   | 必填 | 默认值 | 说明                   |
+| ------ | ------ | ---- | ------ | ---------------------- |
+| format | string | 否   | csv    | 导出格式：csv 或 excel |
 
 **成功响应** (200 OK):
 
@@ -1117,18 +1261,19 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 响应：
+
 ```json
 {
-    "success": true,
-    "data": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3Mjk5NTg0MDB9.xxx",
-        "user": {
-            "id": 1,
-            "username": "admin",
-            "email": "admin@example.com",
-            "role": "admin"
-        }
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJyb2xlIjoiYWRtaW4iLCJleHAiOjE3Mjk5NTg0MDB9.xxx",
+    "user": {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "role": "admin"
     }
+  }
 }
 ```
 
@@ -1149,14 +1294,15 @@ curl -X POST http://localhost:8080/api/v1/surveys \
 ```
 
 响应：
+
 ```json
 {
-    "success": true,
-    "data": {
-        "id": 1,
-        "title": "客户满意度调查",
-        "status": "draft"
-    }
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "客户满意度调查",
+    "status": "draft"
+  }
 }
 ```
 
@@ -1229,14 +1375,15 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/share \
 ```
 
 响应：
+
 ```json
 {
-    "success": true,
-    "data": {
-        "url": "http://localhost:3000/survey/1?token=abc123...",
-        "token": "abc123...",
-        "expires_at": "2025-10-26T10:00:00Z"
-    }
+  "success": true,
+  "data": {
+    "url": "http://localhost:3000/survey/1?token=abc123...",
+    "token": "abc123...",
+    "expires_at": "2025-10-26T10:00:00Z"
+  }
 }
 ```
 
@@ -1300,11 +1447,13 @@ curl -X GET "http://localhost:8080/api/v1/surveys/1/export?format=excel" \
 #### 错误：401 Unauthorized - "未授权访问"
 
 **原因**：
+
 - 未提供 JWT token
 - Token 格式错误
 - Token 已过期
 
 **解决方法**：
+
 1. 确保在请求头中包含 `Authorization: Bearer <token>`
 2. 检查 token 格式是否正确
 3. 如果 token 过期，重新登录获取新 token
@@ -1319,10 +1468,12 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 #### 错误：403 Forbidden - "禁止访问"
 
 **原因**：
+
 - 尝试访问不属于自己的资源
 - 没有足够的权限
 
 **解决方法**：
+
 - 确保只访问自己创建的问卷
 - 检查用户角色权限
 
@@ -1331,11 +1482,13 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 #### 错误：400 Bad Request - "无效的令牌"
 
 **原因**：
+
 - Token 格式错误
 - Token 解密失败
 - Token 被篡改
 
 **解决方法**：
+
 - 使用完整的 token 字符串
 - 不要手动修改 token
 - 重新生成分享链接
@@ -1343,18 +1496,22 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 #### 错误：403 Forbidden - "令牌已过期"
 
 **原因**：
+
 - 链接已超过设置的过期时间
 
 **解决方法**：
+
 - 联系管理员重新生成分享链接
 - 生成链接时设置更长的过期时间
 
 #### 错误：403 Forbidden - "链接已被使用"
 
 **原因**：
+
 - 一次性链接已经被使用过
 
 **解决方法**：
+
 - 联系管理员重新生成新的分享链接
 - 每个链接只能使用一次，这是系统的安全设计
 
@@ -1363,6 +1520,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 #### 错误：400 Bad Request - "数据验证失败"
 
 **原因**：
+
 - 必填题目未回答
 - 单选/多选题的选项不在配置的选项中
 - 表格题的行数不符合限制
@@ -1371,6 +1529,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 **解决方法**：
 
 1. **必填题目未回答**：
+
 ```json
 // 错误示例：缺少必填题目
 {
@@ -1389,6 +1548,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 2. **选项不在范围内**：
+
 ```json
 // 错误示例：选项不存在
 {
@@ -1404,6 +1564,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ```
 
 3. **表格题行数不符合**：
+
 ```json
 // 错误示例：行数少于 min_rows
 {
@@ -1425,10 +1586,13 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 #### 错误：400 Bad Request - "问卷未发布"
 
 **原因**：
+
 - 尝试访问或提交草稿状态的问卷
 
 **解决方法**：
+
 - 管理员需要先发布问卷：
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
   -H "Authorization: Bearer $TOKEN"
@@ -1439,9 +1603,11 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 #### 错误：429 Too Many Requests
 
 **原因**：
+
 - 请求频率超过限制（默认 100 次/分钟）
 
 **解决方法**：
+
 - 等待一分钟后重试
 - 优化客户端请求频率
 - 联系管理员调整限流配置
@@ -1451,11 +1617,13 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 #### 错误：500 Internal Server Error
 
 **原因**：
+
 - 服务器内部错误
 - 数据库连接失败
 - Redis 连接失败
 
 **解决方法**：
+
 - 检查服务器日志
 - 确认数据库和 Redis 服务正常运行
 - 联系系统管理员
@@ -1467,11 +1635,13 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 ### 9.1 安全建议
 
 1. **保护 JWT Token**：
+
    - 不要在 URL 中传递 token
    - 使用 HTTPS 传输
    - 定期刷新 token
 
 2. **分享链接管理**：
+
    - 设置合理的过期时间
    - 不要公开分享加密 token
    - 定期清理过期链接
@@ -1484,10 +1654,12 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 ### 9.2 性能优化
 
 1. **分页查询**：
+
    - 始终使用分页参数
    - 避免一次性加载大量数据
 
 2. **缓存利用**：
+
    - 已发布的问卷会被缓存
    - 减少不必要的重复请求
 
@@ -1498,10 +1670,12 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 ### 9.3 开发建议
 
 1. **错误处理**：
+
    - 始终检查响应的 `success` 字段
    - 根据错误码提供友好的用户提示
 
 2. **请求重试**：
+
    - 对于网络错误，实现指数退避重试
    - 对于 429 错误，等待后重试
 
@@ -1515,46 +1689,51 @@ curl -X POST http://localhost:8080/api/v1/surveys/1/publish \
 
 ### 10.1 HTTP 状态码
 
-| 状态码 | 说明 |
-|--------|------|
-| 200 | 请求成功 |
-| 400 | 请求参数错误 |
-| 401 | 未授权，需要登录 |
-| 403 | 禁止访问，权限不足 |
-| 404 | 资源不存在 |
-| 429 | 请求过于频繁 |
-| 500 | 服务器内部错误 |
+| 状态码 | 说明               |
+| ------ | ------------------ |
+| 200    | 请求成功           |
+| 400    | 请求参数错误       |
+| 401    | 未授权，需要登录   |
+| 403    | 禁止访问，权限不足 |
+| 404    | 资源不存在         |
+| 429    | 请求过于频繁       |
+| 500    | 服务器内部错误     |
 
 ### 10.2 题目类型说明
 
-| 类型 | 值 | 答案格式 | 说明 |
-|------|-----|----------|------|
-| 填空题 | text | string | 单行文本输入 |
-| 单选题 | single | string | 从选项中选择一个 |
-| 多选题 | multiple | string[] | 从选项中选择多个 |
-| 表格题 | table | string[][] | 多行多列数据 |
+| 类型   | 值       | 答案格式   | 说明             |
+| ------ | -------- | ---------- | ---------------- |
+| 填空题 | text     | string     | 单行文本输入     |
+| 单选题 | single   | string     | 从选项中选择一个 |
+| 多选题 | multiple | string[]   | 从选项中选择多个 |
+| 表格题 | table    | string[][] | 多行多列数据     |
 
 ### 10.3 配置参数
 
 **数据库连接池**：
+
 - 最大连接数：100
 - 最大空闲连接：10
 - 连接最大生命周期：1 小时
 
 **Redis 配置**：
+
 - 连接池大小：10
 - 问卷缓存 TTL：1 小时
 - 链接状态缓存 TTL：与链接过期时间相同
 
 **限流配置**：
+
 - 每分钟请求数：100
 - 突发请求数：20
 
 **JWT 配置**：
+
 - 过期时间：24 小时
 - 算法：HS256
 
 **一次性链接**：
+
 - 默认过期时间：1 小时
 - 最大过期时间：7 天
 

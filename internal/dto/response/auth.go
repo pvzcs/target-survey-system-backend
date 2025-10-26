@@ -21,3 +21,9 @@ type UserResponse struct {
 type RegisterResponse struct {
 	Message string `json:"message"`
 }
+
+// UpdateProfileResponse represents the response after successful profile update
+type UpdateProfileResponse struct {
+	Message string       `json:"message"`
+	User    UserResponse `json:"user"`
+}
