@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"gorm.io/driver/mysql"
@@ -19,13 +21,42 @@ var DB *gorm.DB
 // InitDB initializes the database connection
 func InitDB(cfg *config.DatabaseConfig) (*gorm.DB, error) {
 	// Build DSN (Data Source Name)
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		cfg.Username,
-		cfg.Password,
-		cfg.Host,
-		cfg.Port,
-		cfg.Database,
-	)
+	// Support multiple host formats:
+	// - unix socket path: "/var/run/mysqld/mysqld.sock"
+	// - host:port in Host (e.g. "localhost:3306")
+	// - host and Port separately (default port 3306 when not provided)
+	var dsn string
+	if strings.Contains(cfg.Host, "/") {
+		// Treat Host as unix socket path
+		dsn = fmt.Sprintf("%s:%s@unix(%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			cfg.Username,
+			cfg.Password,
+			cfg.Host,
+			cfg.Database,
+		)
+	} else {
+		host := cfg.Host
+		port := cfg.Port
+		// If host contains a colon, allow Host to be "host:port"
+		if strings.Contains(host, ":") {
+			parts := strings.Split(host, ":")
+			host = parts[0]
+			if p, err := strconv.Atoi(parts[1]); err == nil {
+				port = p
+			}
+		}
+		if port == 0 {
+			port = 3306
+		}
+
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			cfg.Username,
+			cfg.Password,
+			host,
+			port,
+			cfg.Database,
+		)
+	}
 
 	// Configure GORM logger
 	gormLogger := logger.Default.LogMode(logger.Info)
