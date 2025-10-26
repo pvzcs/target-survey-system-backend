@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/xuri/excelize/v2"
 	"survey-system/internal/model"
 	"survey-system/internal/repository"
 	"survey-system/pkg/errors"
+
+	"github.com/xuri/excelize/v2"
 )
 
 // ExportService handles data export functionality
@@ -272,17 +273,18 @@ func (s *ExportService) formatTableRow(value interface{}, columns []model.TableC
 		return result
 	}
 
-	rowData, ok := rows[rowIdx].(map[string]interface{})
+	// Each row is an array of values
+	rowData, ok := rows[rowIdx].([]interface{})
 	if !ok {
 		result := make([]string, len(columns))
 		return result
 	}
 
-	// Extract values for each column
+	// Extract values for each column (by index)
 	result := make([]string, len(columns))
-	for i, col := range columns {
-		if cellValue, exists := rowData[col.ID]; exists {
-			result[i] = fmt.Sprintf("%v", cellValue)
+	for i := range columns {
+		if i < len(rowData) {
+			result[i] = fmt.Sprintf("%v", rowData[i])
 		} else {
 			result[i] = ""
 		}

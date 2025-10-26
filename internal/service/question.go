@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
-	"gorm.io/gorm"
 	"survey-system/internal/cache"
 	"survey-system/internal/dto/request"
 	"survey-system/internal/dto/response"
 	"survey-system/internal/model"
 	"survey-system/internal/repository"
 	"survey-system/pkg/errors"
+
+	"gorm.io/gorm"
 )
 
 // QuestionService defines the interface for question business logic
@@ -68,7 +69,7 @@ func (s *questionService) CreateQuestion(ctx context.Context, userID uint, req *
 		Title:       req.Title,
 		Description: req.Description,
 		Required:    req.Required,
-		Order:       req.Order,
+		Order:       *req.Order,
 		Config:      req.Config,
 		PrefillKey:  req.PrefillKey,
 	}
@@ -119,7 +120,7 @@ func (s *questionService) UpdateQuestion(ctx context.Context, userID, questionID
 	question.Title = req.Title
 	question.Description = req.Description
 	question.Required = req.Required
-	question.Order = req.Order
+	question.Order = *req.Order
 	question.Config = req.Config
 	question.PrefillKey = req.PrefillKey
 
@@ -206,7 +207,7 @@ func (s *questionService) ReorderQuestions(ctx context.Context, userID, surveyID
 		if !exists {
 			return errors.NewValidationError("question_id", fmt.Sprintf("question %d does not belong to survey %d", questionID, surveyID))
 		}
-		
+
 		// Create a copy with updated order
 		updatedQuestion := *question
 		updatedQuestion.Order = order

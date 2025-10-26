@@ -9,16 +9,16 @@ import (
 
 // OneLink represents a one-time access link for a survey
 type OneLink struct {
-	ID          uint                   `gorm:"primaryKey" json:"id"`
-	SurveyID    uint                   `gorm:"index;not null" json:"survey_id"`
-	Token       string                 `gorm:"uniqueIndex;size:500;not null" json:"token"` // Encrypted token
-	PrefillData map[string]interface{} `gorm:"type:json" json:"prefill_data"`              // JSON prefill values
-	ExpiresAt   time.Time              `gorm:"index;not null" json:"expires_at"`
-	Used        bool                   `gorm:"default:false;index" json:"used"`
-	UsedAt      *time.Time             `json:"used_at"`
-	AccessedAt  *time.Time             `json:"accessed_at"`
-	CreatedAt   time.Time              `json:"created_at"`
-	
+	ID          uint            `gorm:"primaryKey" json:"id"`
+	SurveyID    uint            `gorm:"index;not null" json:"survey_id"`
+	Token       string          `gorm:"uniqueIndex;size:500;not null" json:"token"` // Encrypted token
+	PrefillData PrefillDataType `gorm:"type:json" json:"prefill_data"`              // JSON prefill values
+	ExpiresAt   time.Time       `gorm:"index;not null" json:"expires_at"`
+	Used        bool            `gorm:"default:false;index" json:"used"`
+	UsedAt      *time.Time      `json:"used_at"`
+	AccessedAt  *time.Time      `json:"accessed_at"`
+	CreatedAt   time.Time       `json:"created_at"`
+
 	// Associations
 	Survey Survey `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
 }
@@ -47,12 +47,12 @@ func (p *PrefillDataType) Scan(value interface{}) error {
 		*p = make(map[string]interface{})
 		return nil
 	}
-	
+
 	bytes, ok := value.([]byte)
 	if !ok {
 		return fmt.Errorf("failed to unmarshal PrefillDataType value: %v", value)
 	}
-	
+
 	return json.Unmarshal(bytes, p)
 }
 

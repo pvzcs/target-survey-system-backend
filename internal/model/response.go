@@ -17,7 +17,7 @@ type Response struct {
 	UserAgent   string       `gorm:"size:500" json:"user_agent"`
 	SubmittedAt time.Time    `gorm:"not null;index" json:"submitted_at"`
 	CreatedAt   time.Time    `json:"created_at"`
-	
+
 	// Associations
 	Survey  Survey  `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
 	OneLink OneLink `gorm:"foreignKey:OneLinkID" json:"one_link,omitempty"`
@@ -36,7 +36,7 @@ type ResponseData struct {
 // Answer represents an answer to a single question
 type Answer struct {
 	QuestionID uint        `json:"question_id"`
-	Value      interface{} `json:"value"` // string, []string, or []map[string]interface{} for table
+	Value      interface{} `json:"value"` // string for text/single, []string for multiple, [][]interface{} for table
 }
 
 // Scan implements the sql.Scanner interface for ResponseData
@@ -45,12 +45,12 @@ func (r *ResponseData) Scan(value interface{}) error {
 		*r = ResponseData{}
 		return nil
 	}
-	
+
 	bytes, ok := value.([]byte)
 	if !ok {
 		return fmt.Errorf("failed to unmarshal ResponseData value: %v", value)
 	}
-	
+
 	return json.Unmarshal(bytes, r)
 }
 

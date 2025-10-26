@@ -15,7 +15,6 @@ type Config struct {
 	JWT        JWTConfig        `mapstructure:"jwt"`
 	Encryption EncryptionConfig `mapstructure:"encryption"`
 	CORS       CORSConfig       `mapstructure:"cors"`
-	RateLimit  RateLimitConfig  `mapstructure:"rate_limit"`
 	OneLink    OneLinkConfig    `mapstructure:"onelink"`
 }
 
@@ -64,12 +63,6 @@ type CORSConfig struct {
 	AllowedOrigins []string `mapstructure:"allowed_origins"`
 	AllowedMethods []string `mapstructure:"allowed_methods"`
 	AllowedHeaders []string `mapstructure:"allowed_headers"`
-}
-
-// RateLimitConfig holds rate limiting configuration
-type RateLimitConfig struct {
-	RequestsPerMinute int `mapstructure:"requests_per_minute"`
-	Burst             int `mapstructure:"burst"`
 }
 
 // OneLinkConfig holds one-time link configuration

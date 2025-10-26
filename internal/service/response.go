@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"survey-system/internal/cache"
@@ -52,13 +53,13 @@ func (s *ResponseService) validateResponseData(questions []model.Question, answe
 	for i := range questions {
 		questionMap[questions[i].ID] = &questions[i]
 	}
-	
+
 	// Create a map of answered question IDs
 	answeredQuestions := make(map[uint]bool)
 	for _, answer := range answers {
 		answeredQuestions[answer.QuestionID] = true
 	}
-	
+
 	// Check all required questions are answered
 	for _, question := range questions {
 		if question.Required && !answeredQuestions[question.ID] {
@@ -69,7 +70,7 @@ func (s *ResponseService) validateResponseData(questions []model.Question, answe
 			}
 		}
 	}
-	
+
 	// Validate each answer
 	for _, answer := range answers {
 		question, exists := questionMap[answer.QuestionID]
@@ -80,12 +81,12 @@ func (s *ResponseService) validateResponseData(questions []model.Question, answe
 				Status:  400,
 			}
 		}
-		
+
 		if err := s.validateAnswer(question, answer.Value); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -132,7 +133,7 @@ func (s *ResponseService) validateSingleChoiceAnswer(question *model.Question, v
 			Status:  400,
 		}
 	}
-	
+
 	// Check if the answer is in the options
 	validOption := false
 	for _, option := range question.Config.Options {
@@ -141,7 +142,7 @@ func (s *ResponseService) validateSingleChoiceAnswer(question *model.Question, v
 			break
 		}
 	}
-	
+
 	if !validOption {
 		return &errors.AppError{
 			Code:    "VALIDATION_FAILED",
@@ -149,7 +150,7 @@ func (s *ResponseService) validateSingleChoiceAnswer(question *model.Question, v
 			Status:  400,
 		}
 	}
-	
+
 	return nil
 }
 
@@ -157,7 +158,7 @@ func (s *ResponseService) validateSingleChoiceAnswer(question *model.Question, v
 func (s *ResponseService) validateMultipleChoiceAnswer(question *model.Question, value interface{}) error {
 	// Value can be []interface{} or []string
 	var answers []string
-	
+
 	switch v := value.(type) {
 	case []interface{}:
 		answers = make([]string, len(v))
@@ -181,13 +182,13 @@ func (s *ResponseService) validateMultipleChoiceAnswer(question *model.Question,
 			Status:  400,
 		}
 	}
-	
+
 	// Check if all answers are in the options
 	optionMap := make(map[string]bool)
 	for _, option := range question.Config.Options {
 		optionMap[option] = true
 	}
-	
+
 	for _, answer := range answers {
 		if !optionMap[answer] {
 			return &errors.AppError{
@@ -197,13 +198,13 @@ func (s *ResponseService) validateMultipleChoiceAnswer(question *model.Question,
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // validateTableAnswer validates table question answer
 func (s *ResponseService) validateTableAnswer(question *model.Question, value interface{}) error {
-	// Value should be []interface{} where each item is a map[string]interface{}
+	// Value should be []interface{} where each item is []interface{} (2D array)
 	rows, ok := value.([]interface{})
 	if !ok {
 		return &errors.AppError{
@@ -212,7 +213,7 @@ func (s *ResponseService) validateTableAnswer(question *model.Question, value in
 			Status:  400,
 		}
 	}
-	
+
 	// Check row count constraints
 	rowCount := len(rows)
 	if question.Config.MinRows > 0 && rowCount < question.Config.MinRows {
@@ -229,77 +230,78 @@ func (s *ResponseService) validateTableAnswer(question *model.Question, value in
 			Status:  400,
 		}
 	}
-	
-	// Create column map for validation
-	columnMap := make(map[string]*model.TableColumn)
-	for i := range question.Config.Columns {
-		columnMap[question.Config.Columns[i].ID] = &question.Config.Columns[i]
-	}
-	
+
+	// Get expected column count
+	expectedColCount := len(question.Config.Columns)
+
 	// Validate each row
 	for rowIdx, rowInterface := range rows {
-		row, ok := rowInterface.(map[string]interface{})
+		// Each row should be an array
+		row, ok := rowInterface.([]interface{})
 		if !ok {
 			return &errors.AppError{
 				Code:    "VALIDATION_FAILED",
-				Message: fmt.Sprintf("题目 '%s' 第 %d 行格式错误", question.Title, rowIdx+1),
+				Message: fmt.Sprintf("题目 '%s' 第 %d 行格式错误，应为数组", question.Title, rowIdx+1),
 				Status:  400,
 			}
 		}
-		
-		// Validate each cell in the row
-		for colID, cellValue := range row {
-			column, exists := columnMap[colID]
-			if !exists {
-				return &errors.AppError{
-					Code:    "VALIDATION_FAILED",
-					Message: fmt.Sprintf("题目 '%s' 列 '%s' 不存在", question.Title, colID),
-					Status:  400,
-				}
+
+		// Check column count
+		if len(row) != expectedColCount {
+			return &errors.AppError{
+				Code:    "VALIDATION_FAILED",
+				Message: fmt.Sprintf("题目 '%s' 第 %d 行列数错误，期望 %d 列，实际 %d 列", question.Title, rowIdx+1, expectedColCount, len(row)),
+				Status:  400,
 			}
-			
+		}
+
+		// Validate each cell
+		for colIdx, cellValue := range row {
+			column := &question.Config.Columns[colIdx]
 			if err := s.validateTableCell(question.Title, rowIdx+1, column, cellValue); err != nil {
 				return err
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // validateTableCell validates a single cell in a table question
 func (s *ResponseService) validateTableCell(questionTitle string, rowNum int, column *model.TableColumn, value interface{}) error {
+	// For table questions, all values come as strings (from 2D string array)
+	// We validate the string format based on column type
+
+	strValue, ok := value.(string)
+	if !ok {
+		return &errors.AppError{
+			Code:    "VALIDATION_FAILED",
+			Message: fmt.Sprintf("题目 '%s' 第 %d 行列 '%s' 必须是字符串", questionTitle, rowNum, column.Label),
+			Status:  400,
+		}
+	}
+
 	switch column.Type {
 	case "text":
-		if _, ok := value.(string); !ok {
-			return &errors.AppError{
-				Code:    "VALIDATION_FAILED",
-				Message: fmt.Sprintf("题目 '%s' 第 %d 行列 '%s' 必须是文本", questionTitle, rowNum, column.Label),
-				Status:  400,
-			}
-		}
+		// Text values are always valid strings
+		return nil
+
 	case "number":
-		// JSON unmarshaling can give us float64 for numbers
-		switch value.(type) {
-		case float64, int, int64:
-			// Valid number types
-		default:
+		// For number type, we just check if it's a valid number string
+		// Allow empty strings if the cell is optional
+		if strValue == "" {
+			return nil
+		}
+		// Try to parse as float to validate it's a number
+		if _, err := strconv.ParseFloat(strValue, 64); err != nil {
 			return &errors.AppError{
 				Code:    "VALIDATION_FAILED",
-				Message: fmt.Sprintf("题目 '%s' 第 %d 行列 '%s' 必须是数字", questionTitle, rowNum, column.Label),
+				Message: fmt.Sprintf("题目 '%s' 第 %d 行列 '%s' 必须是有效的数字", questionTitle, rowNum, column.Label),
 				Status:  400,
 			}
 		}
+
 	case "select":
-		strValue, ok := value.(string)
-		if !ok {
-			return &errors.AppError{
-				Code:    "VALIDATION_FAILED",
-				Message: fmt.Sprintf("题目 '%s' 第 %d 行列 '%s' 必须是字符串", questionTitle, rowNum, column.Label),
-				Status:  400,
-			}
-		}
-		
 		// Check if value is in options
 		validOption := false
 		for _, option := range column.Options {
@@ -308,8 +310,8 @@ func (s *ResponseService) validateTableCell(questionTitle string, rowNum int, co
 				break
 			}
 		}
-		
-		if !validOption {
+
+		if !validOption && strValue != "" {
 			return &errors.AppError{
 				Code:    "VALIDATION_FAILED",
 				Message: fmt.Sprintf("题目 '%s' 第 %d 行列 '%s' 的值 '%s' 不在选项中", questionTitle, rowNum, column.Label, strValue),
@@ -317,31 +319,29 @@ func (s *ResponseService) validateTableCell(questionTitle string, rowNum int, co
 			}
 		}
 	}
-	
-	return nil
-}
 
-// SubmitResponse handles the submission of a survey response
+	return nil
+} // SubmitResponse handles the submission of a survey response
 func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipAddress, userAgent string) (*response.SubmitResponseResponse, error) {
 	ctx := context.Background()
-	
+
 	// Decrypt and validate token
 	tokenData, err := s.encryptionSvc.DecryptToken(req.Token)
 	if err != nil {
 		return nil, errors.ErrInvalidToken
 	}
-	
+
 	// Check if token is expired
 	if time.Now().Unix() > tokenData.ExpiresAt {
 		return nil, errors.ErrTokenExpired
 	}
-	
+
 	// Check one-time link status in cache first
 	used, err := s.cache.GetOneLinkStatus(ctx, req.Token)
 	if err == nil && used {
 		return nil, errors.ErrLinkUsed
 	}
-	
+
 	// Acquire distributed lock to prevent concurrent submissions
 	lockKey := fmt.Sprintf("response:%s", req.Token)
 	acquired, err := s.cache.AcquireLock(ctx, lockKey, 10*time.Second)
@@ -353,30 +353,30 @@ func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipA
 		}
 	}
 	defer s.cache.ReleaseLock(ctx, lockKey)
-	
+
 	// Verify one-time link in database
 	oneLink, err := s.oneLinkRepo.FindByToken(req.Token)
 	if err != nil {
 		return nil, errors.ErrInvalidToken
 	}
-	
+
 	if oneLink.Used {
 		// Update cache
 		s.cache.SetOneLinkStatus(ctx, req.Token, true, time.Until(time.Unix(tokenData.ExpiresAt, 0)))
 		return nil, errors.ErrLinkUsed
 	}
-	
+
 	// Get survey with questions
 	survey, err := s.surveyRepo.FindByID(tokenData.SurveyID)
 	if err != nil {
 		return nil, errors.ErrNotFound
 	}
-	
+
 	// Check if survey is published
 	if survey.Status != "published" {
 		return nil, errors.ErrSurveyNotPublished
 	}
-	
+
 	// Get all questions for the survey
 	questions, err := s.questionRepo.FindBySurveyID(survey.ID)
 	if err != nil {
@@ -386,12 +386,12 @@ func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipA
 			Status:  500,
 		}
 	}
-	
+
 	// Validate response data
 	if err := s.validateResponseData(questions, req.Answers); err != nil {
 		return nil, err
 	}
-	
+
 	// Convert request answers to model answers
 	answers := make([]model.Answer, len(req.Answers))
 	for i, ans := range req.Answers {
@@ -400,11 +400,11 @@ func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipA
 			Value:      ans.Value,
 		}
 	}
-	
+
 	// Create response record
 	responseModel := &model.Response{
-		SurveyID:    survey.ID,
-		OneLinkID:   oneLink.ID,
+		SurveyID:  survey.ID,
+		OneLinkID: oneLink.ID,
 		Data: model.ResponseData{
 			Answers: answers,
 		},
@@ -412,7 +412,7 @@ func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipA
 		UserAgent:   userAgent,
 		SubmittedAt: time.Now(),
 	}
-	
+
 	if err := s.responseRepo.Create(responseModel); err != nil {
 		return nil, &errors.AppError{
 			Code:    "INTERNAL_ERROR",
@@ -420,16 +420,16 @@ func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipA
 			Status:  500,
 		}
 	}
-	
+
 	// Mark one-time link as used
 	if err := s.oneLinkRepo.MarkAsUsed(oneLink.ID); err != nil {
 		// Log error but don't fail the request since response is already saved
 		// In production, this should be logged properly
 	}
-	
+
 	// Update cache
 	s.cache.SetOneLinkStatus(ctx, req.Token, true, time.Until(time.Unix(tokenData.ExpiresAt, 0)))
-	
+
 	return &response.SubmitResponseResponse{
 		ID:          responseModel.ID,
 		SurveyID:    responseModel.SurveyID,
@@ -439,44 +439,53 @@ func (s *ResponseService) SubmitResponse(req *request.SubmitResponseRequest, ipA
 }
 
 // GetResponses retrieves paginated responses for a survey
-func (s *ResponseService) GetResponses(userID, surveyID uint, page, pageSize int) (*response.PaginatedResponseResponse, error) {
+func (s *ResponseService) GetResponses(userID, surveyID uint, page, pageSize int) ([]response.ResponseListItem, *response.PaginatedResponseMeta, error) {
 	// Verify survey ownership
 	survey, err := s.surveyRepo.FindByID(surveyID)
 	if err != nil {
-		return nil, errors.ErrNotFound
+		return nil, nil, errors.ErrNotFound
 	}
-	
+
 	if survey.UserID != userID {
-		return nil, errors.ErrForbidden
+		return nil, nil, errors.ErrForbidden
 	}
-	
+
 	// Get responses with pagination
 	responses, total, err := s.responseRepo.FindBySurveyID(surveyID, page, pageSize)
 	if err != nil {
-		return nil, &errors.AppError{
+		return nil, nil, &errors.AppError{
 			Code:    "INTERNAL_ERROR",
 			Message: "获取填答记录失败",
 			Status:  500,
 		}
 	}
-	
+
 	// Convert to response DTOs
 	responseList := make([]response.ResponseListItem, len(responses))
 	for i, resp := range responses {
+		// Convert ResponseData to map for JSON serialization
+		dataMap := map[string]interface{}{
+			"answers": resp.Data.Answers,
+		}
+
 		responseList[i] = response.ResponseListItem{
 			ID:          resp.ID,
 			SurveyID:    resp.SurveyID,
+			Data:        dataMap,
 			IPAddress:   resp.IPAddress,
+			UserAgent:   resp.UserAgent,
 			SubmittedAt: resp.SubmittedAt,
+			CreatedAt:   resp.CreatedAt,
 		}
 	}
-	
-	return &response.PaginatedResponseResponse{
-		Responses: responseList,
-		Total:     total,
-		Page:      page,
-		PageSize:  pageSize,
-	}, nil
+
+	meta := &response.PaginatedResponseMeta{
+		Page:     page,
+		PageSize: pageSize,
+		Total:    total,
+	}
+
+	return responseList, meta, nil
 }
 
 // GetStatistics retrieves statistics for a survey
@@ -486,11 +495,11 @@ func (s *ResponseService) GetStatistics(userID, surveyID uint) (*response.Statis
 	if err != nil {
 		return nil, errors.ErrNotFound
 	}
-	
+
 	if survey.UserID != userID {
 		return nil, errors.ErrForbidden
 	}
-	
+
 	// Count total responses
 	count, err := s.responseRepo.CountBySurveyID(surveyID)
 	if err != nil {
@@ -500,13 +509,13 @@ func (s *ResponseService) GetStatistics(userID, surveyID uint) (*response.Statis
 			Status:  500,
 		}
 	}
-	
+
 	// Calculate completion rate (assuming all submitted responses are complete)
 	completionRate := 100.0
 	if count == 0 {
 		completionRate = 0.0
 	}
-	
+
 	return &response.StatisticsResponse{
 		SurveyID:       surveyID,
 		TotalResponses: count,

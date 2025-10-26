@@ -42,10 +42,6 @@ cors:
     - Authorization
     - Content-Type
 
-rate_limit:
-  requests_per_minute: 100
-  burst: 20
-
 onelink:
   base_url: http://localhost:3000 # Frontend base URL for share links
   default_expiration: 1h

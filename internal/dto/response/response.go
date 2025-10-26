@@ -12,18 +12,20 @@ type SubmitResponseResponse struct {
 
 // ResponseListItem represents a single response in the list
 type ResponseListItem struct {
-	ID          uint      `json:"id"`
-	SurveyID    uint      `json:"survey_id"`
-	IPAddress   string    `json:"ip_address"`
-	SubmittedAt time.Time `json:"submitted_at"`
+	ID          uint                   `json:"id"`
+	SurveyID    uint                   `json:"survey_id"`
+	Data        map[string]interface{} `json:"data"`
+	IPAddress   string                 `json:"ip_address"`
+	UserAgent   string                 `json:"user_agent"`
+	SubmittedAt time.Time              `json:"submitted_at"`
+	CreatedAt   time.Time              `json:"created_at"`
 }
 
-// PaginatedResponseResponse represents paginated response list
-type PaginatedResponseResponse struct {
-	Responses []ResponseListItem `json:"responses"`
-	Total     int64              `json:"total"`
-	Page      int                `json:"page"`
-	PageSize  int                `json:"page_size"`
+// PaginatedResponseMeta represents pagination metadata
+type PaginatedResponseMeta struct {
+	Page     int   `json:"page"`
+	PageSize int   `json:"page_size"`
+	Total    int64 `json:"total"`
 }
 
 // StatisticsResponse represents survey statistics

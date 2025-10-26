@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"survey-system/internal/dto/request"
 	"survey-system/internal/dto/response"
 	"survey-system/internal/model"
 	"survey-system/internal/repository"
 	"survey-system/pkg/errors"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // ShareService defines the interface for share link business logic
@@ -97,12 +98,12 @@ func (s *shareService) GenerateShareLink(ctx context.Context, userID, surveyID u
 	var expiresAt time.Time
 	if req.ExpiresAt != nil {
 		expiresAt = *req.ExpiresAt
-		
+
 		// Validate expiration is in the future
 		if expiresAt.Before(time.Now()) {
 			return nil, errors.NewValidationError("expires_at", "expiration time must be in the future")
 		}
-		
+
 		// Validate expiration doesn't exceed max expiry
 		maxExpiresAt := time.Now().Add(s.maxExpiry)
 		if expiresAt.After(maxExpiresAt) {
@@ -134,7 +135,7 @@ func (s *shareService) GenerateShareLink(ctx context.Context, userID, surveyID u
 	oneLink := &model.OneLink{
 		SurveyID:    surveyID,
 		Token:       encryptedToken,
-		PrefillData: req.PrefillData,
+		PrefillData: model.PrefillDataType(req.PrefillData),
 		ExpiresAt:   expiresAt,
 		Used:        false,
 	}
@@ -144,7 +145,7 @@ func (s *shareService) GenerateShareLink(ctx context.Context, userID, surveyID u
 	}
 
 	// Build the complete share URL
-	shareURL := fmt.Sprintf("%s/surveys/%d?token=%s", s.baseURL, surveyID, encryptedToken)
+	shareURL := fmt.Sprintf("%s/survey/%d?token=%s", s.baseURL, surveyID, encryptedToken)
 
 	return &response.ShareLinkResponse{
 		Token:     encryptedToken,

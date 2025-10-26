@@ -1,12 +1,13 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"survey-system/internal/api/handler"
 	"survey-system/internal/api/middleware"
 	"survey-system/internal/config"
 	"survey-system/pkg/utils"
+
+	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 // SetupRouter configures all routes for the application
@@ -24,7 +25,6 @@ func SetupRouter(
 
 	// Apply global middleware
 	router.Use(middleware.CORS(cfg))
-	router.Use(middleware.RateLimit(redisClient, cfg.RateLimit.RequestsPerMinute))
 
 	// Create auth middleware
 	authMiddleware := middleware.AuthMiddleware(jwtUtil)
@@ -47,15 +47,15 @@ func SetupRouter(
 			surveys.PUT("/:id", surveyHandler.UpdateSurvey)
 			surveys.DELETE("/:id", surveyHandler.DeleteSurvey)
 			surveys.POST("/:id/publish", surveyHandler.PublishSurvey)
-			
+
 			// Share link generation (protected)
 			surveys.POST("/:id/share", shareHandler.GenerateShareLink)
-			
+
 			// Response management routes (protected)
 			surveys.GET("/:id/responses", responseHandler.GetResponses)
 			surveys.GET("/:id/statistics", responseHandler.GetStatistics)
 			surveys.GET("/:id/export", responseHandler.ExportResponses)
-			
+
 			// Question reorder route (nested under surveys)
 			surveys.PUT("/:id/questions/reorder", questionHandler.ReorderQuestions)
 		}
@@ -74,7 +74,7 @@ func SetupRouter(
 		{
 			// Get survey by token (public access for respondents)
 			public.GET("/surveys/:id", shareHandler.GetSurveyByToken)
-			
+
 			// Submit response (public access for respondents)
 			public.POST("/responses", responseHandler.SubmitResponse)
 		}

@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"survey-system/internal/dto/request"
 	"survey-system/internal/service"
 	"survey-system/pkg/errors"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ResponseHandler handles response-related HTTP requests
@@ -36,13 +37,13 @@ func (h *ResponseHandler) SubmitResponse(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get IP address
 	ipAddress := c.ClientIP()
-	
+
 	// Get User-Agent
 	userAgent := c.GetHeader("User-Agent")
-	
+
 	// Submit response
 	resp, err := h.responseSvc.SubmitResponse(&req, ipAddress, userAgent)
 	if err != nil {
@@ -56,7 +57,7 @@ func (h *ResponseHandler) SubmitResponse(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error": gin.H{
@@ -66,7 +67,7 @@ func (h *ResponseHandler) SubmitResponse(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    resp,
@@ -87,7 +88,7 @@ func (h *ResponseHandler) GetResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get survey ID from URL parameter
 	surveyID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -100,13 +101,13 @@ func (h *ResponseHandler) GetResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Parse pagination parameters
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-	
+
 	// Get responses
-	resp, err := h.responseSvc.GetResponses(userID.(uint), uint(surveyID), page, pageSize)
+	responseList, meta, err := h.responseSvc.GetResponses(userID.(uint), uint(surveyID), page, pageSize)
 	if err != nil {
 		if appErr, ok := err.(*errors.AppError); ok {
 			c.JSON(appErr.Status, gin.H{
@@ -118,7 +119,7 @@ func (h *ResponseHandler) GetResponses(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error": gin.H{
@@ -128,10 +129,11 @@ func (h *ResponseHandler) GetResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"data":    resp,
+		"data":    responseList,
+		"meta":    meta,
 	})
 }
 
@@ -149,7 +151,7 @@ func (h *ResponseHandler) GetStatistics(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get survey ID from URL parameter
 	surveyID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -162,7 +164,7 @@ func (h *ResponseHandler) GetStatistics(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get statistics
 	resp, err := h.responseSvc.GetStatistics(userID.(uint), uint(surveyID))
 	if err != nil {
@@ -176,7 +178,7 @@ func (h *ResponseHandler) GetStatistics(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error": gin.H{
@@ -186,7 +188,7 @@ func (h *ResponseHandler) GetStatistics(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    resp,
@@ -207,7 +209,7 @@ func (h *ResponseHandler) ExportResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get survey ID from URL parameter
 	surveyID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -220,7 +222,7 @@ func (h *ResponseHandler) ExportResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Get format parameter (default to csv)
 	format := c.DefaultQuery("format", "csv")
 	if format != "csv" && format != "excel" {
@@ -233,7 +235,7 @@ func (h *ResponseHandler) ExportResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Export responses
 	data, filename, err := h.responseSvc.ExportResponses(userID.(uint), uint(surveyID), format)
 	if err != nil {
@@ -247,7 +249,7 @@ func (h *ResponseHandler) ExportResponses(c *gin.Context) {
 			})
 			return
 		}
-		
+
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
 			"error": gin.H{
@@ -257,7 +259,7 @@ func (h *ResponseHandler) ExportResponses(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Set appropriate headers based on format
 	var contentType string
 	if format == "csv" {
@@ -265,10 +267,10 @@ func (h *ResponseHandler) ExportResponses(c *gin.Context) {
 	} else {
 		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	}
-	
+
 	c.Header("Content-Type", contentType)
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 	c.Header("Content-Length", strconv.Itoa(len(data)))
-	
+
 	c.Data(http.StatusOK, contentType, data)
 }
